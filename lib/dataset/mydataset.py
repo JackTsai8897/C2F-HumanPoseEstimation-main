@@ -19,14 +19,12 @@ import json_tricks as json
 import numpy as np
 
 from dataset.JointsDataset import JointsDataset
-from nms.nms import oks_nms
-from nms.nms import soft_oks_nms
 
 
 logger = logging.getLogger(__name__)
 
 
-class COCODataset(JointsDataset):
+class MyDataset(JointsDataset):
     '''
     "keypoints": {
         0: "nose",
@@ -192,7 +190,8 @@ class COCODataset(JointsDataset):
             y1 = np.max((0, y))
             x2 = np.min((width - 1, x1 + np.max((0, w - 1))))
             y2 = np.min((height - 1, y1 + np.max((0, h - 1))))
-            if obj['area'] > 0 and x2 >= x1 and y2 >= y1:
+            # if obj['area'] > 0 and x2 >= x1 and y2 >= y1:
+            if x2 >= x1 and y2 >= y1:
                 obj['clean_bbox'] = [x1, y1, x2-x1, y2-y1]
                 valid_objs.append(obj)
         objs = valid_objs
@@ -221,8 +220,11 @@ class COCODataset(JointsDataset):
                 joints_3d_vis[ipt, 2] = 0
 
             center, scale = self._box2cs(obj['clean_bbox'][:4])
+
+            image_path = os.path.join(
+                self.root, 'images', self.image_set, im_ann['file_name'])
             rec.append({
-                'image': self.image_path_from_index(index),
+                'image': image_path,
                 'center': center,
                 'scale': scale,
                 'joints_3d': joints_3d,
@@ -312,84 +314,8 @@ class COCODataset(JointsDataset):
             self.image_thre, num_boxes))
         return kpt_db
 
-    def evaluate(self, cfg, preds, output_dir, all_boxes, img_path,
-                 *args, **kwargs):
-        rank = cfg.RANK
-
-        res_folder = os.path.join(output_dir, 'results')
-        if not os.path.exists(res_folder):
-            try:
-                os.makedirs(res_folder)
-            except Exception:
-                logger.error('Fail to make {}'.format(res_folder))
-
-        res_file = os.path.join(
-            res_folder, 'keypoints_{}_results_{}.json'.format(
-                self.image_set, rank)
-        )
-
-        # person x (keypoints)
-        _kpts = []
-        for idx, kpt in enumerate(preds):
-            _kpts.append({
-                'keypoints': kpt,
-                'center': all_boxes[idx][0:2],
-                'scale': all_boxes[idx][2:4],
-                'area': all_boxes[idx][4],
-                'score': all_boxes[idx][5],
-                'image': int(img_path[idx][-16:-4])
-            })
-        # image x person x (keypoints)
-        kpts = defaultdict(list)
-        for kpt in _kpts:
-            kpts[kpt['image']].append(kpt)
-
-        # rescoring and oks nms
-        num_joints = self.num_joints
-        in_vis_thre = self.in_vis_thre
-        oks_thre = self.oks_thre
-        oks_nmsed_kpts = []
-        for img in kpts.keys():
-            img_kpts = kpts[img]
-            for n_p in img_kpts:
-                box_score = n_p['score']
-                kpt_score = 0
-                valid_num = 0
-                for n_jt in range(0, num_joints):
-                    t_s = n_p['keypoints'][n_jt][2]
-                    if t_s > in_vis_thre:
-                        kpt_score = kpt_score + t_s
-                        valid_num = valid_num + 1
-                if valid_num != 0:
-                    kpt_score = kpt_score / valid_num
-                # rescoring
-                n_p['score'] = kpt_score * box_score
-
-            if self.soft_nms:
-                keep = soft_oks_nms(
-                    [img_kpts[i] for i in range(len(img_kpts))],
-                    oks_thre
-                )
-            else:
-                keep = oks_nms(
-                    [img_kpts[i] for i in range(len(img_kpts))],
-                    oks_thre
-                )
-
-            if len(keep) == 0:
-                oks_nmsed_kpts.append(img_kpts)
-            else:
-                oks_nmsed_kpts.append([img_kpts[_keep] for _keep in keep])
-
-        self._write_coco_keypoint_results(
-            oks_nmsed_kpts, res_file)
-        if 'test' not in self.image_set:
-            info_str = self._do_python_keypoint_eval(
-                res_file, res_folder)
-            name_value = OrderedDict(info_str)
-            return name_value, name_value['AP']
-        else:
-            return {'Null': 0}, 0
+    def evaluate(self, cfg, preds, output_dir, *args, **kwargs):
+        raise NotImplementedError
 
     def _write_coco_keypoint_results(self, keypoints, res_file):
         data_pack = [
