@@ -231,6 +231,10 @@ class MyDataset(JointsDataset):
                 'joints_3d_vis': joints_3d_vis,
                 'filename': '',
                 'imgnum': 0,
+                'x': x,
+                'y': y,
+                'w': w,
+                'h': h,
             })
 
         return rec
@@ -243,7 +247,7 @@ class MyDataset(JointsDataset):
         center = np.zeros((2), dtype=np.float32)
         center[0] = x + w * 0.5
         center[1] = y + h * 0.5
-
+        
         if w > self.aspect_ratio * h:
             h = w * 1.0 / self.aspect_ratio
         elif w < self.aspect_ratio * h:

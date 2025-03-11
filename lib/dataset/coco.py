@@ -203,6 +203,10 @@ class COCODataset(JointsDataset):
                 'joints_3d_vis': joints_3d_vis,
                 'filename': '',
                 'imgnum': 0,
+                'x': obj['clean_bbox'][0],
+                'y': obj['clean_bbox'][1],
+                'w': obj['clean_bbox'][2],
+                'h': obj['clean_bbox'][3],
             })
 
         return rec

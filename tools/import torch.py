@@ -13,7 +13,7 @@ from config import update_config
 
 import dataset
 import torchvision.transforms as transforms
-
+'''
 # Update config from experiments
 cfg.defrost()
 cfg.merge_from_file("../experiments/coco/hrnet/w48_384x288_adam_lr1e-3.yaml")
@@ -26,7 +26,7 @@ cfg.DATASET.ROT_FACTOR = 0
 cfg.DATASET.PROB_HALF_BODY = 0.0
 cfg.DATASET.NUM_JOINTS_HALF_BODY = 0
 cfg.freeze()
-
+'''
 normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
     )
