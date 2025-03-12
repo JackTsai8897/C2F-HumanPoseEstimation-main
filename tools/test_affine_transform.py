@@ -21,6 +21,9 @@ cfg.DATASET.PROB_HALF_BODY = 0.0
 cfg.DATASET.NUM_JOINTS_HALF_BODY = 0
 cfg.freeze()
 '''
+# Change image size of model input
+cfg.MODEL.IMAGE_SIZE = [512, 224]
+cfg.MODEL.HEATMAP_SIZE = [128, 56]
 normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
     )
@@ -53,13 +56,14 @@ from utils.transforms import affine_transform
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-#image_size = np.array(cfg.MODEL.IMAGE_SIZE)
-rec = train_dataset.db[0]
+image_size = np.array(cfg.MODEL.IMAGE_SIZE)
+rec = train_dataset.db[15]
 c = rec['center']
 s = rec['scale']
-r = 10
+r = 0
 data_numpy = cv2.imread(rec['image'])
-image_size = [384, 96] # model input size
+# image_size = [384, 96] 
+# # model input size
 # aspect ratio used in coco dataset is calculated by model input size 
 # to make the transformed image has same aspect ratio as model input size, so that can avoid distortion
 #image_size = np.array([384, 288])

@@ -27,6 +27,9 @@ cfg.DATASET.PROB_HALF_BODY = 0.0
 cfg.DATASET.NUM_JOINTS_HALF_BODY = 0
 cfg.freeze()
 '''
+cfg.MODEL.IMAGE_SIZE = [512, 224]
+cfg.MODEL.HEATMAP_SIZE = [128, 56]
+cfg.DATASET.ROT_FACTOR = 0
 normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
     )
@@ -38,7 +41,7 @@ train_dataset = eval('dataset.'+cfg.DATASET.DATASET)(
         ])
     )
 
-input, target, target_weight, meta = train_dataset[15]
+input, target, target_weight, meta = train_dataset[0]
 
 import torch
 import numpy as np
