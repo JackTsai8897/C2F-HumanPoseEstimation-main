@@ -20,6 +20,8 @@ cfg.DATASET.NUM_JOINTS_HALF_BODY = 0
 
 cfg.MODEL.IMAGE_SIZE = [512, 224]
 cfg.MODEL.HEATMAP_SIZE = [128, 56]
+# cfg.MODEL.IMAGE_SIZE = [384, 288]
+# cfg.MODEL.HEATMAP_SIZE = [96, 72]
 cfg.freeze()
 
 # Create the model
