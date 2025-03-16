@@ -116,9 +116,9 @@ for i, point in enumerate(dst):
 
 
 # Save the transformed image with bounding box
-cv2.imwrite('./output_images/original_with_bbox.jpg', original_image)
-cv2.imwrite('./output_images/transformed_with_bbox.jpg', transformed_image)
-cv2.imwrite('./output_images/test.jpg', input)
+cv2.imwrite('./output_images/bbox/original_with_bbox.jpg', original_image)
+cv2.imwrite('./output_images/bbox/transformed_with_bbox.jpg', transformed_image)
+cv2.imwrite('./output_images/bbox/test.jpg', input)
 
 # cv2.imshow('Original Image with Bounding Box', original_image)
 # cv2.imshow('Transformed Image with Bounding Box', transformed_image)
@@ -149,5 +149,5 @@ plt.title('Transformed Image')
 plt.axis('off')
 
 plt.tight_layout()
-plt.savefig('./output_images/comparison_plot.png')
+plt.savefig('./output_images/bbox/comparison_plot.png')
 plt.show()
