@@ -20,7 +20,8 @@ import torch.optim
 import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.transforms as transforms
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 import _init_paths
 from config import cfg
@@ -115,10 +116,10 @@ def main():
     writer_dict['writer'].add_graph(model_fine, (dump_input_fine, ))
     logger.info(get_model_summary(model_fine, dump_input_fine))
 
-    #model = torch.nn.DataParallel(model, device_ids=[0]).cuda()
-    #model_fine = torch.nn.DataParallel(model_fine,device_ids=[0]).cuda()         # gaidong
-    model = torch.nn.DataParallel(model, device_ids=[0,1,2,3]).cuda()
-    model_fine = torch.nn.DataParallel(model_fine, device_ids=[0,1,2,3]).cuda()         # gaidong
+    model = torch.nn.DataParallel(model, device_ids=[0]).cuda()
+    model_fine = torch.nn.DataParallel(model_fine,device_ids=[0]).cuda()         # gaidong
+    # model = torch.nn.DataParallel(model, device_ids=[0,1,2,3]).cuda()
+    # model_fine = torch.nn.DataParallel(model_fine, device_ids=[0,1,2,3]).cuda()         # gaidong
     # define loss function (criterion) and optimizer
     criterion = JointsMSELoss(
         use_target_weight=cfg.LOSS.USE_TARGET_WEIGHT
