@@ -50,3 +50,10 @@ The code is developed using python 3.6 on Ubuntu 16.04. The code is developed an
 ## Quick start
 Please refer to [HRNet](https://github.com/leoxiaobin/deep-high-resolution-net.pytorch)
 
+Install PyTorch if you haven't already. For example, if you are using CUDA 12.1, you can install PyTorch 2.5.1 with:
+    pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
+or    
+    pip install -r requirements-pytorch.txt 
+    
+Install the dependencies:
+    pip install -r requirements.txt

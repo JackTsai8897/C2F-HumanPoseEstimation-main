@@ -1,11 +1,17 @@
-EasyDict==1.7
-opencv-python
-shapely
-Cython
-scipy
-pandas
-pyyaml
-json_tricks
-scikit-image
-yacs>=0.1.5
-tensorboardX
+# Base dependency
+Cython==3.0.12
+json_tricks==3.17.3
+matplotlib==3.10.1
+numpy==1.24.3
+opencv_python==4.11.0.86
+pandas==2.2.3
+Pillow==11.1.0
+scikit_learn==1.6.1
+scipy==1.15.2
+seaborn==0.13.2
+setuptools==65.5.0
+yacs==0.1.8
+
+# COCO API
+pycocotools==2.0.8
+xtcocotools==1.14.3
