@@ -19,6 +19,7 @@ DATASET:
   SCALE_FACTOR: 0.0
   TEST_SET: 'val'
   TRAIN_SET: 'train'
+  UPSAMPLE_FACTOR: 550
 MODEL:
   INIT_WEIGHTS: true
   NAME: pose_hrnet
