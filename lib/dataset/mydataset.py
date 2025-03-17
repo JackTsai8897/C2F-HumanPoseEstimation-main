@@ -143,21 +143,7 @@ class MyDataset(JointsDataset):
         for _ in range(self.upsample_factor):
             for item in db:
                 # 創建新的數據項
-                new_item = item.copy()
-                
-                # 可以在這裡添加額外的數據增強
-                # 例如：稍微調整中心點、縮放等
-                center = new_item['center'].copy()
-                scale = new_item['scale'].copy()
-                
-                # 添加輕微的隨機偏移（可選）
-                center[0] += np.random.uniform(-2, 2)
-                center[1] += np.random.uniform(-2, 2)
-                scale *= np.random.uniform(0.95, 1.05)
-                
-                new_item['center'] = center
-                new_item['scale'] = scale
-                
+                new_item = item.copy()                
                 upsampled_db.append(new_item)
         
         logger.info(f'=> Upsampled from {original_len} to {len(upsampled_db)} samples')
@@ -256,7 +242,7 @@ class MyDataset(JointsDataset):
             [w * 1.0 / self.pixel_std, h * 1.0 / self.pixel_std],
             dtype=np.float32)
         if center[0] != -1:
-            scale = scale * 1.25
+            scale = scale * 1.25 # 1.25 is slightly larger than heatmap gaussian sigma
 
         return center, scale
 
@@ -318,8 +304,268 @@ class MyDataset(JointsDataset):
             self.image_thre, num_boxes))
         return kpt_db
 
-    def evaluate(self, cfg, preds, output_dir, *args, **kwargs):
-        raise NotImplementedError
+    def evaluate(self, cfg, preds, output_dir, all_boxes, img_path,
+             *args, **kwargs):
+        """
+        Evaluate the keypoint detection results using pixel distance as metric
+        
+        Args:
+            cfg: config object
+            preds: list of predictions, each prediction is a list of keypoints
+            output_dir: output directory for saving results
+            all_boxes: bounding box information
+            img_path: list of image paths
+        
+        Returns:
+            An OrderedDict containing evaluation metrics
+        """
+        logger.info('=> Evaluating using pixel distance metric')
+        
+        # Create output directory if it doesn't exist
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
+        # Convert predictions to standard format
+        num_samples = len(all_boxes)
+        all_preds = np.zeros((num_samples, self.num_joints, 3), dtype=np.float32)
+        all_boxes = np.zeros((num_samples, 6), dtype=np.float32)
+        image_ids = []
+        idx = 0
+        
+        for i in range(len(preds)):
+            # Get image id
+            image_id = self.image_set_index[i]
+            image_ids.append(image_id)
+            
+            # Get keypoints
+            kpt_pred = preds[i]
+            box_pred = all_boxes[i]
+            
+            # Record predictions
+            all_preds[idx] = kpt_pred
+            all_boxes[idx] = box_pred
+            idx += 1
+        
+        # Get ground truth keypoints
+        gt_db = self._get_db()
+        gt_keypoints = np.zeros((num_samples, self.num_joints, 3), dtype=np.float32)
+        
+        # Match predictions with ground truth based on image_id
+        for i, image_id in enumerate(image_ids):
+            gt_keypoints_for_image = None
+            for item in gt_db:
+                if self.coco.loadImgs(image_id)[0]['file_name'] in item['image']:
+                    gt_keypoints_for_image = item['joints_3d']
+                    break
+            
+            if gt_keypoints_for_image is not None:
+                gt_keypoints[i] = gt_keypoints_for_image
+        
+        # Calculate pixel distance for each keypoint
+        distances = []
+        valid_keypoints = 0
+        total_keypoints = 0
+        
+        # Thresholds for evaluation (in pixels)
+        thresholds = [7, 14, 21]
+        threshold_count = [0] * len(thresholds)
+        
+        # Calculate PCK for each keypoint at each threshold
+        keypoint_pck = np.zeros((self.num_joints, len(thresholds)), dtype=np.float32)
+        keypoint_valid_counts = np.zeros(self.num_joints, dtype=np.int32)
+        
+        # Store per-image results
+        per_image_results = []
+        
+        for i in range(num_samples):
+            image_id = image_ids[i]
+            image_name = self.coco.loadImgs(image_id)[0]['file_name']
+            
+            # Store results for this image
+            image_result = {
+                'image_id': int(image_id),
+                'image_name': image_name,
+                'keypoints': []
+            }
+            
+            image_valid_keypoints = 0
+            image_total_keypoints = 0
+            image_distances = []
+            
+            for j in range(self.num_joints):
+                # Check if both prediction and ground truth are valid
+                pred_vis = all_preds[i, j, 2] > 0
+                gt_vis = gt_keypoints[i, j, 0] > 0 and gt_keypoints[i, j, 1] > 0
+                
+                total_keypoints += 1
+                image_total_keypoints += 1
+                
+                # Store keypoint result
+                keypoint_result = {
+                    'keypoint_id': j,
+                    'keypoint_name': self._get_keypoint_name(j),
+                    'predicted': [float(all_preds[i, j, 0]), float(all_preds[i, j, 1])],
+                    'ground_truth': [float(gt_keypoints[i, j, 0]), float(gt_keypoints[i, j, 1])],
+                    'visibility': {
+                        'prediction': bool(pred_vis),
+                        'ground_truth': bool(gt_vis)
+                    }
+                }
+                
+                if pred_vis and gt_vis:
+                    valid_keypoints += 1
+                    image_valid_keypoints += 1
+                    keypoint_valid_counts[j] += 1
+                    
+                    # Calculate Euclidean distance
+                    pred_x, pred_y = all_preds[i, j, 0], all_preds[i, j, 1]
+                    gt_x, gt_y = gt_keypoints[i, j, 0], gt_keypoints[i, j, 1]
+                    
+                    dist = np.sqrt((pred_x - gt_x)**2 + (pred_y - gt_y)**2)
+                    distances.append(dist)
+                    image_distances.append(dist)
+                    
+                    # Add distance to keypoint result
+                    keypoint_result['distance'] = float(dist)
+                    
+                    # Count predictions within thresholds
+                    for k, threshold in enumerate(thresholds):
+                        if dist <= threshold:
+                            threshold_count[k] += 1
+                            keypoint_pck[j, k] += 1
+                            keypoint_result[f'within_{threshold}px'] = True
+                        else:
+                            keypoint_result[f'within_{threshold}px'] = False
+                else:
+                    keypoint_result['distance'] = None
+                    for threshold in thresholds:
+                        keypoint_result[f'within_{threshold}px'] = None
+                
+                image_result['keypoints'].append(keypoint_result)
+            
+            # Add image-level statistics
+            if image_distances:
+                image_result['statistics'] = {
+                    'mean_distance': float(np.mean(image_distances)),
+                    'median_distance': float(np.median(image_distances)),
+                    'max_distance': float(np.max(image_distances)),
+                    'min_distance': float(np.min(image_distances)),
+                    'valid_keypoints': int(image_valid_keypoints),
+                    'total_keypoints': int(image_total_keypoints),
+                    'valid_percentage': float(image_valid_keypoints / image_total_keypoints * 100)
+                }
+            else:
+                image_result['statistics'] = {
+                    'mean_distance': None,
+                    'median_distance': None,
+                    'max_distance': None,
+                    'min_distance': None,
+                    'valid_keypoints': int(image_valid_keypoints),
+                    'total_keypoints': int(image_total_keypoints),
+                    'valid_percentage': 0.0
+                }
+            
+            per_image_results.append(image_result)
+        
+        # Calculate overall metrics
+        mean_dist = np.mean(distances) if distances else float('inf')
+        median_dist = np.median(distances) if distances else float('inf')
+        max_dist = np.max(distances) if distances else float('inf')
+        min_dist = np.min(distances) if distances else float('inf')
+        std_dist = np.std(distances) if distances else float('inf')
+        
+        # Calculate PCK (Percentage of Correct Keypoints) for each threshold
+        pck_values = [count / valid_keypoints * 100 if valid_keypoints > 0 else 0 
+                    for count in threshold_count]
+        
+        # Calculate PCK percentage for each keypoint
+        for j in range(self.num_joints):
+            if keypoint_valid_counts[j] > 0:
+                keypoint_pck[j] = keypoint_pck[j] / keypoint_valid_counts[j] * 100
+        
+        # Print results
+        logger.info('=> Mean pixel distance: {:.2f}'.format(mean_dist))
+        logger.info('=> Median pixel distance: {:.2f}'.format(median_dist))
+        logger.info('=> Max pixel distance: {:.2f}'.format(max_dist))
+        logger.info('=> Min pixel distance: {:.2f}'.format(min_dist))
+        logger.info('=> Std pixel distance: {:.2f}'.format(std_dist))
+        logger.info('=> Valid keypoints: {}/{} ({:.2f}%)'.format(
+            valid_keypoints, total_keypoints, 
+            valid_keypoints / total_keypoints * 100 if total_keypoints > 0 else 0
+        ))
+        
+        # Print PCK values
+        for i, threshold in enumerate(thresholds):
+            logger.info('=> PCK@{} pixels: {:.2f}%'.format(threshold, pck_values[i]))
+        
+        # Print PCK values for each keypoint
+        for j in range(self.num_joints):
+            logger.info('=> {} PCK@7 pixels: {:.2f}%'.format(
+                self._get_keypoint_name(j), keypoint_pck[j, 0]))
+        
+        # Save overall results to file
+        result_file = os.path.join(output_dir, 'pixel_distance_results.json')
+        with open(result_file, 'w') as f:
+            json.dump({
+                'mean_distance': float(mean_dist),
+                'median_distance': float(median_dist),
+                'max_distance': float(max_dist),
+                'min_distance': float(min_dist),
+                'std_distance': float(std_dist),
+                'valid_keypoints': int(valid_keypoints),
+                'total_keypoints': int(total_keypoints),
+                'valid_percentage': float(valid_keypoints / total_keypoints * 100 if total_keypoints > 0 else 0),
+                'thresholds': thresholds,
+                'pck_values': [float(v) for v in pck_values],
+                'keypoint_pck': {
+                    self._get_keypoint_name(j): {
+                        f'PCK@{threshold}px': float(keypoint_pck[j, i])
+                        for i, threshold in enumerate(thresholds)
+                    }
+                    for j in range(self.num_joints)
+                }
+            }, f, indent=4)
+        
+        # Save per-image results to file
+        per_image_file = os.path.join(output_dir, 'per_image_results.json')
+        with open(per_image_file, 'w') as f:
+            json.dump(per_image_results, f, indent=4)
+        
+        logger.info('=> Evaluation results saved to {}'.format(result_file))
+        logger.info('=> Per-image results saved to {}'.format(per_image_file))
+        
+        # Return metrics in the specified format
+        name_value = [
+            ('W0', float(keypoint_pck[0, 0])),  # PCK for keypoint 0 at 7px threshold
+            ('W1', float(keypoint_pck[1, 0])),  # PCK for keypoint 1 at 7px threshold
+            ('W2', float(keypoint_pck[2, 0])),  # PCK for keypoint 2 at 7px threshold
+            ('E0', float(keypoint_pck[3, 0])),  # PCK for keypoint 3 at 7px threshold
+            ('E1', float(keypoint_pck[4, 0])),  # PCK for keypoint 4 at 7px threshold
+            ('E2', float(keypoint_pck[5, 0])),  # PCK for keypoint 5 at 7px threshold
+            ('Mean', float(np.mean(keypoint_pck[:, 0]))),  # Mean PCK across all keypoints at 7px
+            ('PCK@7px', float(pck_values[0])),
+            ('PCK@14px', float(pck_values[1])),
+            ('PCK@21px', float(pck_values[2])),
+            ('Mean_distance', float(mean_dist)),
+            ('Median_distance', float(median_dist))
+        ]
+        name_value = OrderedDict(name_value)
+        
+        return name_value, name_value["Mean"]
+
+    def _get_keypoint_name(self, keypoint_id):
+        """
+        Get the name of a keypoint based on its ID
+        """
+        keypoint_names = {
+            0: "W0",
+            1: "W1",
+            2: "W2",
+            3: "E0",
+            4: "E1",
+            5: "E2"
+        }
+        return keypoint_names.get(keypoint_id, f"keypoint_{keypoint_id}")
 
     def _write_coco_keypoint_results(self, keypoints, res_file):
         data_pack = [
