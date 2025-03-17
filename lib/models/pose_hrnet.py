@@ -544,9 +544,17 @@ class ChannelAttention(nn.Module):
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.max_pool = nn.AdaptiveMaxPool2d(1)
 
-        self.fc1 = nn.Conv2d(in_planes, in_planes // 16, 1, bias=False)
+        
+        # 確保中間層通道數至少為 1
+        reduction_ratio = 16
+        mid_channels = max(1, in_planes // reduction_ratio)
+        
+        # self.fc1 = nn.Conv2d(in_planes, in_planes // 16, 1, bias=False)
+        # self.relu1 = nn.ReLU()
+        # self.fc2 = nn.Conv2d(in_planes // 16, in_planes, 1, bias=False)
+        self.fc1 = nn.Conv2d(in_planes, mid_channels, 1, bias=False)
         self.relu1 = nn.ReLU()
-        self.fc2 = nn.Conv2d(in_planes // 16, in_planes, 1, bias=False)
+        self.fc2 = nn.Conv2d(mid_channels, in_planes, 1, bias=False)
 
         self.sigmoid = nn.Sigmoid()
 
