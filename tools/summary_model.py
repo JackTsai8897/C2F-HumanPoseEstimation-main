@@ -7,7 +7,7 @@ import models
 from utils.utils import get_model_summary
 
 cfg.defrost()
-cfg.merge_from_file("../experiments/coco/hrnet/w48_384x288_adam_lr1e-3.yaml")
+cfg.merge_from_file("../experiments/mydataset/hrnet/w48_512x224_adam_lr1e-3.yaml")
 # cfg.merge_from_list("../experiments/coco/hrnet/w48_384x288_adam_lr1e-3.yaml")
 cfg.DATASET.ROOT = os.path.join(
         "..", cfg.DATA_DIR, cfg.DATASET.ROOT
