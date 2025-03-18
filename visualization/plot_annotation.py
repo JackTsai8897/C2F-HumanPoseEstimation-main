@@ -149,14 +149,16 @@ def visualize_annotations(json_file, image_dir, output_dir=None, show_images=Tru
 
 def main():
     # 設置JSON檔案和圖像目錄路徑
-    root = '../data/mydataset'
-    dataset = 'val'
-    json_file = '{}/annotations/person_keypoints_{}.json'.format(root, dataset)  # 請替換為您的JSON檔案路徑
-    image_dir = '{}/images/{}'.format(root, dataset)            # 請替換為您的圖像目錄路徑
-    output_dir = 'visualized_results/mydataset'  # 輸出目錄
-    
-    # 可視化標註
-    visualize_annotations(json_file, image_dir, output_dir, show_images=True, save_images=True)
+    dataset = 'mydataset'
+    target_sets = ['train', 'val']
+    root = '../data/{}'.format(dataset)
+    for target_set in target_sets:
+        json_file = '{}/annotations/person_keypoints_{}.json'.format(root, target_set)  # 請替換為您的JSON檔案路徑
+        image_dir = '{}/images/{}'.format(root, target_set)            # 請替換為您的圖像目錄路徑
+        output_dir = 'visualized_results/{}/{}'.format(dataset, target_set)  # 輸出目錄
+        
+        # 可視化標註
+        visualize_annotations(json_file, image_dir, output_dir, show_images=True, save_images=True)
 
 if __name__ == "__main__":
     main()
