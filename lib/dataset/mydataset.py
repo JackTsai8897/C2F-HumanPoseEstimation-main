@@ -558,12 +558,12 @@ class MyDataset(JointsDataset):
         Get the name of a keypoint based on its ID
         """
         keypoint_names = {
-            0: "W0",
-            1: "W1",
-            2: "W2",
-            3: "E0",
-            4: "E1",
-            5: "E2"
+            0: "E0",
+            1: "E1",
+            2: "E2",
+            3: "W0",
+            4: "W1",
+            5: "W2"
         }
         return keypoint_names.get(keypoint_id, f"keypoint_{keypoint_id}")
 
