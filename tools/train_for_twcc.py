@@ -168,6 +168,7 @@ def main():
         final_output_dir, 'checkpoint.pth'
     )
 
+    #Auto Resume
     if cfg.AUTO_RESUME and os.path.exists(checkpoint_file):
         logger.info("=> loading checkpoint '{}'".format(checkpoint_file))
         checkpoint = torch.load(checkpoint_file)
@@ -175,7 +176,12 @@ def main():
         best_perf = checkpoint['perf']
         last_epoch = checkpoint['epoch']
         model.load_state_dict(checkpoint['state_dict'])
-
+        # 添加这一段
+        if 'state_dict_fine' in checkpoint:
+            model_fine.load_state_dict(checkpoint['state_dict_fine'])
+        else:
+            logger.warning("=> No state_dict_fine found in checkpoint, model_fine will use random initialization")
+    
         optimizer.load_state_dict(checkpoint['optimizer'])
         logger.info("=> loaded checkpoint '{}' (epoch {})".format(
             checkpoint_file, checkpoint['epoch']))
@@ -211,11 +217,15 @@ def main():
             best_model = False
 
         logger.info('=> saving checkpoint to {}'.format(final_output_dir))
+        
+        # save checkpoint
         save_checkpoint({
             'epoch': epoch + 1,
             'model': cfg.MODEL.NAME,
             'state_dict': model.state_dict(),
+            'state_dict_fine': model_fine.state_dict(),  # 添加这一行
             'best_state_dict': model.module.state_dict(),
+            'best_state_dict_fine': model_fine.module.state_dict(),  # 添加这一行
             'perf': perf_indicator,
             'optimizer': optimizer.state_dict(),
         }, best_model, final_output_dir)
