@@ -51,6 +51,8 @@ The code is developed using python 3.6 on Ubuntu 16.04. The code is developed an
 ## Quick start
 Please refer to [HRNet](https://github.com/leoxiaobin/deep-high-resolution-net.pytorch)
 
+Download pretrained models from [HRNet](https://github.com/leoxiaobin/deep-high-resolution-net.pytorch) and put them in the `models` folder.
+
 Install PyTorch if you haven't already. For example, if you are using CUDA 12.1, you can install PyTorch 2.5.1 with:
     pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 or    
@@ -58,3 +60,8 @@ or
     
 Install the dependencies:
     pip install -r requirements.txt
+
+for 1 GPU, Run:
+    python ./tools/train.py --cfg experiments/mydataset/hrnet/test_w48_512x224_adam_lr1e-3.yaml
+for 4 GPU, Run:
+    python ./tools/train_for_twcc.py --cfg experiments/mydataset/hrnet/w48_512x224_adam_lr1e-3.yaml
