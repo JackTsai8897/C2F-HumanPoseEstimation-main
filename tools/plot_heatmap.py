@@ -13,10 +13,10 @@ from config import update_config
 
 import dataset
 import torchvision.transforms as transforms
-'''
+
 # Update config from experiments
 cfg.defrost()
-cfg.merge_from_file("../experiments/coco/hrnet/w48_384x288_adam_lr1e-3.yaml")
+cfg.merge_from_file("../experiments/mydataset/hrnet/w48_512x224_adam_lr1e-3.yaml")
 # cfg.merge_from_list("../experiments/coco/hrnet/w48_384x288_adam_lr1e-3.yaml")
 cfg.DATASET.ROOT = os.path.join(
         "..", cfg.DATA_DIR, cfg.DATASET.ROOT
@@ -26,22 +26,30 @@ cfg.DATASET.ROT_FACTOR = 0
 cfg.DATASET.PROB_HALF_BODY = 0.0
 cfg.DATASET.NUM_JOINTS_HALF_BODY = 0
 cfg.freeze()
-'''
-cfg.MODEL.IMAGE_SIZE = [512, 224]
-cfg.MODEL.HEATMAP_SIZE = [128, 56]
-cfg.DATASET.ROT_FACTOR = 0
+
+# cfg.MODEL.IMAGE_SIZE = [512, 224]
+# cfg.MODEL.HEATMAP_SIZE = [128, 56]
+# cfg.DATASET.ROT_FACTOR = 0
 normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
     )
-train_dataset = eval('dataset.'+cfg.DATASET.DATASET)(
-        cfg, cfg.DATASET.ROOT, cfg.DATASET.TRAIN_SET, True,
+# train_dataset = eval('dataset.'+cfg.DATASET.DATASET)(
+#         cfg, cfg.DATASET.ROOT, cfg.DATASET.TRAIN_SET, True,
+#         transforms.Compose([
+#             transforms.ToTensor(),#把[0,255]形状为[H,W,C]的图片转化为[1,1.0]形状为[C,H,W]的torch.FloatTensor
+#             normalize,
+#         ])
+#     )
+valid_dataset = eval('dataset.'+cfg.DATASET.DATASET)(
+        cfg, cfg.DATASET.ROOT, cfg.DATASET.TEST_SET, False,
         transforms.Compose([
-            transforms.ToTensor(),#把[0,255]形状为[H,W,C]的图片转化为[1,1.0]形状为[C,H,W]的torch.FloatTensor
+            transforms.ToTensor(),
             normalize,
         ])
     )
 
-input, target, target_weight, meta = train_dataset[0]
+# input, target, target_weight, meta = train_dataset[0]
+input, target, target_weight, meta = valid_dataset[40]
 
 import torch
 import numpy as np
