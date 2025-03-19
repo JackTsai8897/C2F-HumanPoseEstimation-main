@@ -88,12 +88,22 @@ def main():
     if cfg.TEST.MODEL_FILE:
         logger.info('=> loading model from {}'.format(cfg.TEST.MODEL_FILE))
         model.load_state_dict(torch.load(cfg.TEST.MODEL_FILE), strict=False)
+        # 添加这一段
+        if 'state_dict_fine' in checkpoint:
+            model_fine.load_state_dict(checkpoint['state_dict_fine'])
+        else:
+            logger.warning("=> No state_dict_fine found in checkpoint, model_fine will use random initialization")
     else:
         model_state_file = os.path.join(
             final_output_dir, 'final_state.pth'
         )
         logger.info('=> loading model from {}'.format(model_state_file))
         model.load_state_dict(torch.load(model_state_file))
+        # 添加这一段
+        if 'state_dict_fine' in checkpoint:
+            model_fine.load_state_dict(checkpoint['state_dict_fine'])
+        else:
+            logger.warning("=> No state_dict_fine found in checkpoint, model_fine will use random initialization")
 
     model = torch.nn.DataParallel(model, device_ids=[0]).cuda()
     model_fine = torch.nn.DataParallel(model_fine, device_ids=[0]).cuda()
