@@ -41,6 +41,10 @@ class HandKeypointsDataset(Dataset):
         self.rotation_factor = cfg.DATASET.ROT_FACTOR
         self.flip = cfg.DATASET.FLIP
         self.color_rgb = cfg.DATASET.COLOR_RGB
+        # 添加crop影像功能的配置
+        self.padding_image_to_black_except_bbox = cfg.DATASET.get('PADDING_IMAGE_TO_BLACK_WITHOUT_BBOX', False)  # 默認為False，不進行裁剪
+        self.bbox_padding_factor = cfg.DATASET.get('BBOX_PADDING_FACTOR', 0.0)  # 默認為0，不進行擴展 range 1 ~ -1
+        
 
         self.target_type = cfg.MODEL.TARGET_TYPE
         self.image_size = np.array(cfg.MODEL.IMAGE_SIZE)
@@ -100,8 +104,15 @@ class HandKeypointsDataset(Dataset):
             # sf = self.scale_factor
             rf = self.rotation_factor
             # s = s * np.clip(np.random.randn()*sf + 1, 1 - sf, 1 + sf)
-            r = r = random.uniform(-rf, rf)
+            r = random.uniform(-rf, rf)
 
+        # 在進行仿射變換前應用黑色填充
+        if self.padding_image_to_black_except_bbox:
+            # 使用center和scale創建bbox
+            bbox = [c[0], c[1], s[0], s[1]]
+            data_numpy = self.add_black_padding(data_numpy, bbox)
+            logger.debug('=> Applied black padding to image')
+            
         trans = get_affine_transform(c, s, r, self.image_size)
         input = cv2.warpAffine(
             data_numpy,
@@ -339,3 +350,48 @@ class HandKeypointsDataset(Dataset):
         image_jittered = cv2.cvtColor(image_hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
         
         return image_jittered
+    
+    def add_black_padding(self, image, bbox):
+        """
+        將圖像中除了bbox區域外的部分填充為黑色
+        
+        Args:
+            image: 輸入圖像 (numpy array)
+            bbox: 邊界框 [center_x, center_y, scale_x, scale_y]，其中scale需要乘以pixel_std
+            
+        Returns:
+            處理後的圖像，僅bbox區域保持原樣，其餘為黑色
+        """
+        # 創建與原圖像相同大小的黑色圖像
+        black_image = np.zeros_like(image)
+        
+        # 獲取圖像尺寸
+        img_height, img_width = image.shape[:2]
+        
+        # 從bbox中提取座標 - 假設bbox格式為 [center_x, center_y, scale_x, scale_y]
+        center_x, center_y = bbox[0], bbox[1]
+        # scale需要乘以pixel_std來獲得實際寬高
+        width, height = bbox[2] * self.pixel_std, bbox[3] * self.pixel_std
+        
+        # 計算左上角座標
+        x = center_x - width * 0.5
+        y = center_y - height * 0.5
+        
+        # 應用擴展係數 (可以是正值擴展或負值收縮)
+        padding_w = width * self.bbox_padding_factor
+        padding_h = height * self.bbox_padding_factor
+        # x = x - padding_w/2
+        # y = y - padding_h/2
+        w = width + padding_w/2
+        h = height + padding_h/2
+        
+        # 確保座標在有效範圍內
+        x1 = max(0, int(x))
+        y1 = max(0, int(y))
+        x2 = min(img_width, int(x + w))
+        y2 = min(img_height, int(y + h))
+        
+        # 只保留bbox區域的原始圖像，其餘部分為黑色
+        black_image[y1:y2, x1:x2] = image[y1:y2, x1:x2]
+        
+        return black_image
