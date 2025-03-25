@@ -34,7 +34,7 @@ import models
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Train keypoints network')
+    parser = argparse.ArgumentParser(description='Test keypoints network')
     # general
     parser.add_argument('--cfg',
                         help='experiment configure file name',
@@ -85,24 +85,48 @@ def main():
     model, model_fine = eval('models.' + cfg.MODEL.NAME + '.get_pose_net')(
         cfg, is_train=False)
 
+    
     if cfg.TEST.MODEL_FILE:
         logger.info('=> loading model from {}'.format(cfg.TEST.MODEL_FILE))
         model.load_state_dict(torch.load(cfg.TEST.MODEL_FILE), strict=False)
-        # 添加这一段
-        if 'state_dict_fine' in checkpoint:
-            model_fine.load_state_dict(checkpoint['state_dict_fine'])
-        else:
-            logger.warning("=> No state_dict_fine found in checkpoint, model_fine will use random initialization")
+        logger.warning("=> No state_dict_fine found in checkpoint, model_fine will use random initialization")
     else:
-        model_state_file = os.path.join(
-            final_output_dir, 'final_state.pth'
+        checkpoint_file = os.path.join(
+            final_output_dir, 'checkpoint.pth'
         )
-        logger.info('=> loading model from {}'.format(model_state_file))
-        model.load_state_dict(torch.load(model_state_file))
-        # 添加这一段
+        logger.info('=> loading model from {}'.format(checkpoint_file))
+        
+        # Load the checkpoint
+        checkpoint = torch.load(checkpoint_file)
+        
+        # Remove 'module.' prefix from state_dict keys
+        state_dict = checkpoint['state_dict']
+        new_state_dict = {}
+        for key, value in state_dict.items():
+            if key.startswith('module.'):
+                new_key = key[7:]  # Remove 'module.' prefix
+            else:
+                new_key = key
+            new_state_dict[new_key] = value
+        
+        # Do the same for state_dict_fine if it exists
         if 'state_dict_fine' in checkpoint:
-            model_fine.load_state_dict(checkpoint['state_dict_fine'])
+            state_dict_fine = checkpoint['state_dict_fine']
+            new_state_dict_fine = {}
+            for key, value in state_dict_fine.items():
+                if key.startswith('module.'):
+                    new_key = key[7:]  # Remove 'module.' prefix
+                else:
+                    new_key = key
+                new_state_dict_fine[new_key] = value
+            
+            # Load the processed state dictionaries
+            model.load_state_dict(new_state_dict)
+            model_fine.load_state_dict(new_state_dict_fine)
+            logger.info('=> Successfully loaded model and model_fine weights after removing module. prefix')
         else:
+            # If state_dict_fine doesn't exist, just load the main model
+            model.load_state_dict(new_state_dict)
             logger.warning("=> No state_dict_fine found in checkpoint, model_fine will use random initialization")
 
     model = torch.nn.DataParallel(model, device_ids=[0]).cuda()

@@ -16,7 +16,7 @@ import torchvision.transforms as transforms
 
 # Update config from experiments
 cfg.defrost()
-cfg.merge_from_file("../experiments/mydataset/hrnet/w48_512x224_adam_lr1e-3.yaml")
+cfg.merge_from_file("../experiments/mydataset/hrnet/new_w48_512x224_adam_lr1e-3.yaml")
 # cfg.merge_from_list("../experiments/coco/hrnet/w48_384x288_adam_lr1e-3.yaml")
 cfg.DATASET.ROOT = os.path.join(
         "..", cfg.DATA_DIR, cfg.DATASET.ROOT
@@ -25,6 +25,9 @@ cfg.DATASET.SCALE_FACTOR = 0.0
 cfg.DATASET.ROT_FACTOR = 0
 cfg.DATASET.PROB_HALF_BODY = 0.0
 cfg.DATASET.NUM_JOINTS_HALF_BODY = 0
+cfg.DATASET.PADDING_IMAGE_TO_BLACK_WITHOUT_BBOX = True # padding image to black without bbox
+cfg.DATASET.BBOX_PADDING_FACTOR = -0.1 # extend padding area
+
 cfg.freeze()
 
 # cfg.MODEL.IMAGE_SIZE = [512, 224]
