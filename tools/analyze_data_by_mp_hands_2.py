@@ -647,6 +647,58 @@ def analyze_by_subject(df, output_dir):
     # Create a summary dataframe for subject statistics
     subject_stats = []
     
+    # Print hand orientation counts by subject
+    print("\nHand orientation counts by subject:")
+    orientation_counts = df.groupby(['subject_name', 'orientation']).size().unstack(fill_value=0)
+    print(orientation_counts)
+
+    # Calculate totals
+    total_left = orientation_counts['Left'].sum() if 'Left' in orientation_counts.columns else 0
+    total_right = orientation_counts['Right'].sum() if 'Right' in orientation_counts.columns else 0
+
+    # Create a bar chart of hand orientation counts by subject
+    plt.figure(figsize=(12, 8))
+
+    # Set up the bar positions
+    x = np.arange(len(orientation_counts.index))
+    width = 0.35
+
+    # Create bars for Left and Right hands
+    left_counts = orientation_counts['Left'] if 'Left' in orientation_counts.columns else np.zeros(len(orientation_counts.index))
+    right_counts = orientation_counts['Right'] if 'Right' in orientation_counts.columns else np.zeros(len(orientation_counts.index))
+
+    plt.bar(x - width/2, left_counts, width, label=f'Left Hand (Total: {total_left})', color='orange', alpha=0.7)
+    plt.bar(x + width/2, right_counts, width, label=f'Right Hand (Total: {total_right})', color='purple', alpha=0.7)
+
+    # Add labels and title
+    plt.xlabel('Subject', fontsize=12)
+    plt.ylabel('Number of Images', fontsize=12)
+    plt.title('Hand Orientation Counts by Subject', fontsize=14)
+    plt.xticks(x, orientation_counts.index, rotation=45, ha='right')
+    plt.legend()
+    plt.grid(True, linestyle='--', axis='y', alpha=0.7)
+
+    # Add count labels on top of bars
+    for i, (left, right) in enumerate(zip(left_counts, right_counts)):
+        if left > 0:
+            plt.text(i - width/2, left + 0.5, str(int(left)), ha='center', va='bottom')
+        if right > 0:
+            plt.text(i + width/2, right + 0.5, str(int(right)), ha='center', va='bottom')
+
+    # Add total counts as text annotation in the upper part of the plot
+    plt.annotate(f'Total Left: {total_left}, Total Right: {total_right}', 
+                xy=(0.5, 0.95), xycoords='axes fraction',
+                ha='center', va='top',
+                bbox=dict(boxstyle='round,pad=0.5', facecolor='white', alpha=0.7))
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(subject_dir, 'hand_orientation_counts_by_subject.png'), 
+                dpi=300, bbox_inches='tight')
+    plt.close()
+
+    # Save the orientation counts to CSV
+    orientation_counts.to_csv(os.path.join(subject_dir, 'hand_orientation_counts.csv'))
+    
     # Check for keypoint columns
     keypoint_columns = [col for col in df.columns if col.startswith('keypoint_') and col.endswith('_distance') and not col.startswith('keypoint_0_') and not col.startswith('keypoint_1_')]
     all_keypoints = []
