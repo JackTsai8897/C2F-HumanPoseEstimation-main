@@ -18,12 +18,13 @@ from pycocotools.cocoeval import COCOeval
 import json_tricks as json
 import numpy as np
 
-from dataset.HandKeypointsDataset import HandKeypointsDataset
+# from dataset.HandKeypointsDataset import HandKeypointsDataset
+from dataset.JointsDataset import JointsDataset
 
 logger = logging.getLogger(__name__)
 
 
-class MyDataset(HandKeypointsDataset):
+class MyDataset(JointsDataset):
     '''
     "keypoints": {
         0: "nose",
@@ -53,7 +54,11 @@ class MyDataset(HandKeypointsDataset):
         # 添加上採樣相關配置
         self.upsample_factor = cfg.DATASET.get('UPSAMPLE_FACTOR', 1)  # 默認為1，不進行上採樣
         
-        self.coco = COCO(self._get_ann_file_keypoint())
+        # 讀取左右手的json file
+        anno_path = os.path.join(self.root, 'annotations', cfg.DATASET.HAND_ORIENTATION+'_hand_'+self.image_set+'.json')
+        self.coco = COCO(anno_path)
+        # self.coco = COCO(self._get_ann_file_keypoint())
+        
 
         # deal with class names
         cats = [cat['name']
@@ -535,12 +540,12 @@ class MyDataset(HandKeypointsDataset):
         
         # Return metrics in the specified format
         name_value = [
-            ('W0', float(keypoint_pck[0, 0])),  # PCK for keypoint 0 at 7px threshold
-            ('W1', float(keypoint_pck[1, 0])),  # PCK for keypoint 1 at 7px threshold
-            ('W2', float(keypoint_pck[2, 0])),  # PCK for keypoint 2 at 7px threshold
-            ('E0', float(keypoint_pck[3, 0])),  # PCK for keypoint 3 at 7px threshold
-            ('E1', float(keypoint_pck[4, 0])),  # PCK for keypoint 4 at 7px threshold
-            ('E2', float(keypoint_pck[5, 0])),  # PCK for keypoint 5 at 7px threshold
+            ('E0', float(keypoint_pck[0, 0])),  # PCK for keypoint 0 at 7px threshold
+            ('E1', float(keypoint_pck[1, 0])),  # PCK for keypoint 1 at 7px threshold
+            ('E2', float(keypoint_pck[2, 0])),  # PCK for keypoint 2 at 7px threshold
+            ('W0', float(keypoint_pck[3, 0])),  # PCK for keypoint 3 at 7px threshold
+            ('W1', float(keypoint_pck[4, 0])),  # PCK for keypoint 4 at 7px threshold
+            ('W2', float(keypoint_pck[5, 0])),  # PCK for keypoint 5 at 7px threshold
             ('Mean', float(np.mean(keypoint_pck[:, 0]))),  # Mean PCK across all keypoints at 7px
             ('PCK@7px', float(pck_values[0])),
             ('PCK@14px', float(pck_values[1])),
