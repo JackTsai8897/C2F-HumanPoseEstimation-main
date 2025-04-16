@@ -5,9 +5,9 @@ import numpy as np
 
 # Configuration
 JSON_FILE = "../output/mydataset/pose_hrnet/new_w48_512x224_adam_lr1e-3/per_image_results.json"  # Path to your JSON file
-GT_JSON_FILE = "../data/mydataset/annotations/person_keypoints_val.json"  # Path to your ground truth JSON file
+GT_JSON_FILE = "../data/mydataset/annotations/left_hand_val.json"  # Path to your ground truth JSON file
 IMAGE_DIR = "../data/mydataset/images/val"               # Directory containing your images
-OUTPUT_DIR = "visualized_results/mydataset/val_pred"      # Directory to save visualizations
+OUTPUT_DIR = "visualized_results/mydataset/val_pred_all_left"      # Directory to save visualizations
 SHOW_LABELS = True                 # Whether to show keypoint labels
 SHOW_DISTANCE = False             # Whether to show distance between points
 SHOW_BBOX = True                  # Whether to show bounding boxes

@@ -8,7 +8,7 @@ from collections import defaultdict
 import matplotlib.patches as patches
 
 # Configuration
-JSON_FILE = "../output/mydataset/pose_hrnet/new_w48_512x224_adam_lr1e-3/per_image_results.json"
+JSON_FILE = "../output/mydataset/pose_hrnet/right_w48_512x224_adam_lr1e-3/per_image_results.json"
 OUTPUT_DIR = "visualized_results/mydataset/analysis"
 OUTPUT_CSV = "keypoint_error_analysis.csv"
 OUTPUT_PLOT = "keypoint_error_analysis.png"
@@ -191,7 +191,7 @@ def analyze_keypoint_errors():
     
     # Create the base heatmap with mean values
     ax = sns.heatmap(df_mean.astype(float), annot=False, cmap="YlOrRd", 
-                linewidths=.5, cbar_kws={'label': 'Mean Error (pixels)'})
+                linewidths=.5, cbar_kws={'label': 'Mean Error (pixels)'}, vmin=0, vmax=30)
     
     # Add text annotations with mean ± std
     for i in range(len(df_mean.index)):
