@@ -119,9 +119,9 @@ if not results.isna().all().all():
         cbar_kws={'label': 'p-value'},
         annot_kws={"size": 24}  # 調整數值字體大小為8
     )
-    plt.title('T-test P-values (Model1 vs Model2)', fontsize=16)
-    plt.xticks(fontsize=10)
-    plt.yticks(fontsize=10)
+    plt.title('T-test P-values (Model1 vs Model2)', fontsize=24)
+    plt.xticks(fontsize=22)
+    plt.yticks(fontsize=22)
     plt.tight_layout()
     plt.savefig(os.path.join(OUTPUT_DIR, 'p_values_heatmap.png'), dpi=300)
 else:
@@ -297,9 +297,9 @@ try:
             cbar_kws={'label': 'Mean Error Difference (Model1 - Model2)'},
             annot_kws={"size": 24}  # 調整數值字體大小為8
         )
-        plt.title('Mean Error Difference by Subject and Keypoint', fontsize=16)
-        plt.xticks(fontsize=10)
-        plt.yticks(fontsize=10)
+        plt.title('Mean Error Difference by Subject and Keypoint', fontsize=24)
+        plt.xticks(fontsize=22)
+        plt.yticks(fontsize=22)
         plt.tight_layout()
         plt.savefig(os.path.join(OUTPUT_DIR, 'mean_diff_heatmap.png'), dpi=300)
     else:
