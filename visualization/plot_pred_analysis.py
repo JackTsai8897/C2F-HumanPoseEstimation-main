@@ -8,7 +8,7 @@ from collections import defaultdict
 import matplotlib.patches as patches
 
 # Configuration
-JSON_FILE = "../output/mydataset/pose_hrnet/new_w48_512x224_adam_lr1e-3/per_image_results_right.json"
+JSON_FILE = "../output/mydataset/pose_hrnet/right_w48_512x224_adam_lr1e-3/per_image_results.json"
 OUTPUT_DIR = "visualized_results/mydataset/analysis"
 OUTPUT_CSV = "keypoint_error_analysis.csv"
 OUTPUT_PLOT = "keypoint_error_analysis.png"
@@ -206,7 +206,7 @@ def analyze_keypoint_errors():
                 # Add text annotation
                 ax.text(j + 0.5, i + 0.5, text, 
                         ha="center", va="center", color=text_color,
-                        fontsize=9)
+                        fontsize=18)
     
     plt.title('Keypoint Error Analysis (Mean ± Std in pixels)', fontsize=16)
     plt.tight_layout()

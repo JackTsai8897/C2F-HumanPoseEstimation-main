@@ -1,5 +1,5 @@
 # Configuration
-orientation = 'right'
+orientation = 'left'
 JSON_FILE1 = r'C:/Users/Jack/workspace/MyProject/C2F-HumanPoseEstimation-main/output/mydataset/pose_hrnet/new_w48_512x224_adam_lr1e-3/per_image_results_{}.json'.format(orientation) 
 JSON_FILE2 = r'C:/Users/Jack/workspace/MyProject/C2F-HumanPoseEstimation-main/output/mydataset/pose_hrnet/{}_w48_512x224_adam_lr1e-3/per_image_results.json'.format(orientation)
 OUTPUT_DIR = "visualized_results/mydataset/analysis/t_test"
@@ -116,7 +116,8 @@ if not results.isna().all().all():
         mask=mask,
         vmin=0,
         vmax=0.05,
-        cbar_kws={'label': 'p-value'}
+        cbar_kws={'label': 'p-value'},
+        annot_kws={"size": 24}  # 調整數值字體大小為8
     )
     plt.title('T-test P-values (Model1 vs Model2)', fontsize=16)
     plt.xticks(fontsize=10)
@@ -293,7 +294,8 @@ try:
             cmap=cmap,
             mask=mask,
             center=0,
-            cbar_kws={'label': 'Mean Error Difference (Model1 - Model2)'}
+            cbar_kws={'label': 'Mean Error Difference (Model1 - Model2)'},
+            annot_kws={"size": 24}  # 調整數值字體大小為8
         )
         plt.title('Mean Error Difference by Subject and Keypoint', fontsize=16)
         plt.xticks(fontsize=10)
