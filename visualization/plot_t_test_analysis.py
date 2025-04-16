@@ -1,5 +1,5 @@
 # Configuration
-orientation = 'left'
+orientation = 'right'
 JSON_FILE1 = r'C:/Users/Jack/workspace/MyProject/C2F-HumanPoseEstimation-main/output/mydataset/pose_hrnet/new_w48_512x224_adam_lr1e-3/per_image_results_{}.json'.format(orientation) 
 JSON_FILE2 = r'C:/Users/Jack/workspace/MyProject/C2F-HumanPoseEstimation-main/output/mydataset/pose_hrnet/{}_w48_512x224_adam_lr1e-3/per_image_results.json'.format(orientation)
 OUTPUT_DIR = "visualized_results/mydataset/analysis/t_test"
@@ -71,21 +71,21 @@ def perform_t_test(group1, group2):
         return np.nan, np.nan
 
 # 創建結果表格 - 使用純數值DataFrame
-results = pd.DataFrame(index=all_subjects + ['All'], columns=all_keypoints + ['All'])
+results = pd.DataFrame(index=all_subjects + ['All_s'], columns=all_keypoints + ['All_kp'])
 results = results.astype('float64')  # 確保所有值都是浮點數
 
 # 進行每個subject和keypoint的t檢驗
-for subject in all_subjects + ['All']:
-    for keypoint in all_keypoints + ['All']:
-        if subject == 'All' and keypoint == 'All':
+for subject in all_subjects + ['All_s']:
+    for keypoint in all_keypoints + ['All_kp']:
+        if subject == 'All_s' and keypoint == 'All_kp':
             # 所有subject和所有keypoint
             group1 = df1['error'].values
             group2 = df2['error'].values
-        elif subject == 'All':
+        elif subject == 'All_s':
             # 所有subject，特定keypoint
             group1 = df1[df1['keypoint'] == keypoint]['error'].values
             group2 = df2[df2['keypoint'] == keypoint]['error'].values
-        elif keypoint == 'All':
+        elif keypoint == 'All_kp':
             # 特定subject，所有keypoint
             group1 = df1[df1['subject'] == subject]['error'].values
             group2 = df2[df2['subject'] == subject]['error'].values
@@ -129,15 +129,15 @@ plt.close()
 
 # 計算平均誤差差異
 mean_diff = {}
-for subject in all_subjects + ['All']:
-    for keypoint in all_keypoints + ['All']:
-        if subject == 'All' and keypoint == 'All':
+for subject in all_subjects + ['All_s']:
+    for keypoint in all_keypoints + ['All_kp']:
+        if subject == 'All_s' and keypoint == 'All_kp':
             mean1 = df1['error'].mean()
             mean2 = df2['error'].mean()
-        elif subject == 'All':
+        elif subject == 'All_s':
             mean1 = df1[df1['keypoint'] == keypoint]['error'].mean()
             mean2 = df2[df2['keypoint'] == keypoint]['error'].mean()
-        elif keypoint == 'All':
+        elif keypoint == 'All_kp':
             mean1 = df1[df1['subject'] == subject]['error'].mean()
             mean2 = df2[df2['subject'] == subject]['error'].mean()
         else:
@@ -166,8 +166,8 @@ Model comparison:
 
 # 找出最顯著的差異
 significant_pairs = []
-for subject in all_subjects + ['All']:
-    for keypoint in all_keypoints + ['All']:
+for subject in all_subjects + ['All_s']:
+    for keypoint in all_keypoints + ['All_kp']:
         p_value = results.loc[subject, keypoint]
         if pd.notnull(p_value) and p_value < 0.05:
             key = f"{subject}_{keypoint}"
@@ -189,11 +189,11 @@ with open(os.path.join(OUTPUT_DIR, 'analysis_summary.txt'), 'w') as f:
     f.write(summary)
 
 # 為每個subject創建箱形圖比較
-for subject in all_subjects + ['All']:
+for subject in all_subjects + ['All_s']:
     try:
         plt.figure(figsize=(16, 10))
         
-        if subject == 'All':
+        if subject == 'All_s':
             subject_df = combined_df
             title = "All Subjects - Error Comparison"
         else:
@@ -218,7 +218,7 @@ for subject in all_subjects + ['All']:
             plt.xticks(rotation=45)
             
             # 添加顯著性標記
-            if subject != 'All':
+            if subject != 'All_s':
                 for i, kp in enumerate(order):
                     if kp in results.columns and pd.notnull(results.loc[subject, kp]) and results.loc[subject, kp] < 0.05:
                         max_error = subject_df[subject_df['keypoint'] == kp]['error'].max()
@@ -269,12 +269,13 @@ plt.close()
 
 # 創建熱圖顯示平均誤差差異
 try:
-    # 創建一個純數值的DataFrame
-    mean_diff_df = pd.DataFrame(index=all_subjects, columns=all_keypoints)
+    # 創建一個純數值的DataFrame，包含所有subjects和keypoints以及All_s和All_kp
+    mean_diff_df = pd.DataFrame(index=all_subjects + ['All_s'], columns=all_keypoints + ['All_kp'])
     mean_diff_df = mean_diff_df.astype('float64')  # 確保所有值都是浮點數
     
-    for subject in all_subjects:
-        for keypoint in all_keypoints:
+    # 填充所有組合的平均誤差差異
+    for subject in all_subjects + ['All_s']:
+        for keypoint in all_keypoints + ['All_kp']:
             key = f"{subject}_{keypoint}"
             if key in mean_diff:
                 mean_diff_df.loc[subject, keypoint] = mean_diff[key]

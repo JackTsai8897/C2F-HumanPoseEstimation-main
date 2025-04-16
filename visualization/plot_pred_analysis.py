@@ -8,7 +8,7 @@ from collections import defaultdict
 import matplotlib.patches as patches
 
 # Configuration
-JSON_FILE = "../output/mydataset/pose_hrnet/right_w48_512x224_adam_lr1e-3/per_image_results.json"
+JSON_FILE = "../output/mydataset/pose_hrnet/new_w48_512x224_adam_lr1e-3/per_image_results_right.json"
 OUTPUT_DIR = "visualized_results/mydataset/analysis"
 OUTPUT_CSV = "keypoint_error_analysis.csv"
 OUTPUT_PLOT = "keypoint_error_analysis.png"
@@ -66,14 +66,14 @@ def analyze_keypoint_errors():
     subjects = sorted(errors_by_subject_keypoint.keys())
     
     # Create DataFrame columns: ALL, followed by individual keypoints
-    columns = keypoint_names + ['ALL']
+    columns = keypoint_names + ["ALL_kp"]
     
     # Initialize DataFrame for mean ± std
-    df = pd.DataFrame(index=subjects + ['Total'], columns=columns)
+    df = pd.DataFrame(index=subjects + ["ALL_s"], columns=columns)
     
     # Initialize DataFrames for mean and std separately (for heatmap)
-    df_mean = pd.DataFrame(index=subjects + ['Total'], columns=columns)
-    df_std = pd.DataFrame(index=subjects + ['Total'], columns=columns)
+    df_mean = pd.DataFrame(index=subjects + ["ALL_s"], columns=columns)
+    df_std = pd.DataFrame(index=subjects + ["ALL_s"], columns=columns)
     
     # Initialize DataFrame for raw data (for boxplot)
     raw_data = []
@@ -96,9 +96,9 @@ def analyze_keypoint_errors():
         mean_all = np.mean(all_errors) if all_errors else 0
         std_all = np.std(all_errors) if all_errors else 0
         
-        df.at[subject, 'ALL'] = f"{mean_all:.2f} ± {std_all:.2f}"
-        df_mean.at[subject, 'ALL'] = mean_all
-        df_std.at[subject, 'ALL'] = std_all
+        df.at[subject, "ALL_kp"] = f"{mean_all:.2f} ± {std_all:.2f}"
+        df_mean.at[subject, "ALL_kp"] = mean_all
+        df_std.at[subject, "ALL_kp"] = std_all
         
         # Calculate for each keypoint
         for kp_name in keypoint_names:
@@ -123,7 +123,7 @@ def analyze_keypoint_errors():
         # Add to raw data
         for error in all_errors_by_keypoint[kp_name]:
             raw_data.append({
-                'Subject': 'Total',
+                'Subject': "ALL_s",
                 'Keypoint': kp_name,
                 'Error': error
             })
@@ -131,9 +131,9 @@ def analyze_keypoint_errors():
     mean_all = np.mean(all_errors) if all_errors else 0
     std_all = np.std(all_errors) if all_errors else 0
     
-    df.at['Total', 'ALL'] = f"{mean_all:.2f} ± {std_all:.2f}"
-    df_mean.at['Total', 'ALL'] = mean_all
-    df_std.at['Total', 'ALL'] = std_all
+    df.at["ALL_s", "ALL_kp"] = f"{mean_all:.2f} ± {std_all:.2f}"
+    df_mean.at["ALL_s", "ALL_kp"] = mean_all
+    df_std.at["ALL_s", "ALL_kp"] = std_all
     
     # Each keypoint column (all subjects)
     for kp_name in keypoint_names:
@@ -141,13 +141,13 @@ def analyze_keypoint_errors():
         if errors:
             mean_kp = np.mean(errors)
             std_kp = np.std(errors)
-            df.at['Total', kp_name] = f"{mean_kp:.2f} ± {std_kp:.2f}"
-            df_mean.at['Total', kp_name] = mean_kp
-            df_std.at['Total', kp_name] = std_kp
+            df.at["ALL_s", kp_name] = f"{mean_kp:.2f} ± {std_kp:.2f}"
+            df_mean.at["ALL_s", kp_name] = mean_kp
+            df_std.at["ALL_s", kp_name] = std_kp
         else:
-            df.at['Total', kp_name] = "N/A"
-            df_mean.at['Total', kp_name] = np.nan
-            df_std.at['Total', kp_name] = np.nan
+            df.at["ALL_s", kp_name] = "N/A"
+            df_mean.at["ALL_s", kp_name] = np.nan
+            df_std.at["ALL_s", kp_name] = np.nan
     
     # Convert raw data to DataFrame
     df_raw = pd.DataFrame(raw_data)
