@@ -78,10 +78,18 @@ def get_optimizer(cfg, model):
 
 def save_checkpoint(states, is_best, output_dir,
                     filename='checkpoint.pth'):
+    # 保存常規的 checkpoint
     torch.save(states, os.path.join(output_dir, filename))
+    
+    # 如果是最佳模型，保存 model_best.pth
     if is_best and 'state_dict' in states:
         torch.save(states['best_state_dict'],
                    os.path.join(output_dir, 'model_best.pth'))
+    
+    # 每當 epoch 是 5 的倍數時，保存一個特定的 checkpoint
+    if 'epoch' in states and states['epoch'] % 5 == 0:
+        epoch_filename = "checkpoint_{}.pth".format(states['epoch'])
+        torch.save(states, os.path.join(output_dir, epoch_filename))
 
 
 def get_model_summary(model, *input_tensors, item_length=26, verbose=False):
