@@ -42,7 +42,7 @@ human pose estimation network (HM2PN). </br>
 - Flip test is used.
 - Detector for the person category has person AP of 60.9 on COCO test-dev2017 dataset.
 - GFLOPs is for convolution and linear layers only.
--UDP means  [*The Devil is in the Details: Delving into Unbiased Data Processing for Human Pose Estimation*]https://github.com/HuangJunJie2017/UDP-Pose/blob/master/README.md).
+- UDP means  [*The Devil is in the Details: Delving into Unbiased Data Processing for Human Pose Estimation*](https://github.com/HuangJunJie2017/UDP-Pose/blob/master/README.md).
 
 
 ## Environment
@@ -65,3 +65,7 @@ for 1 GPU, Run:
     python ./tools/train.py --cfg experiments/mydataset/hrnet/test_w48_512x224_adam_lr1e-3.yaml
 for 4 GPU, Run:
     python ./tools/train_for_twcc.py --cfg experiments/mydataset/hrnet/w48_512x224_adam_lr1e-3.yaml
+
+sudo apt update && sudo apt upgrade -y
+sudo apt install libglx-mesa0
+sudo apt install libgl1-mesa-dev
