@@ -103,7 +103,7 @@ def train(config, train_loader, model, model_fine, criterion, criterion_fine, op
 
 
 def validate(config, val_loader, val_dataset, model, model_fine, criterion, criterion_fine, output_dir,
-             tb_log_dir, writer_dict=None):
+             tb_log_dir, writer_dict=None, wo_model_fine=False):
     batch_time = AverageMeter()
     losses = AverageMeter()
     acc = AverageMeter()
@@ -127,7 +127,13 @@ def validate(config, val_loader, val_dataset, model, model_fine, criterion, crit
         for i, (input, target, target_weight, meta) in enumerate(val_loader):
             # compute output
             outputs = model(input)
-            outputs = model_fine(outputs)
+            
+            # check if wo_model_fine is True, if so, use the output of model as the output of model_fine
+            if wo_model_fine:
+                output = outputs
+            else:
+                outputs = model_fine(outputs)
+            
             if isinstance(outputs, list):
                 output = outputs[-1]
             else:
