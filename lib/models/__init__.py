@@ -14,3 +14,5 @@ from __future__ import print_function
 
 import models.pose_resnet
 import models.pose_hrnet
+import models.transpose_r
+import models.transpose_h
