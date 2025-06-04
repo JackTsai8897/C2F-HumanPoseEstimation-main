@@ -93,9 +93,11 @@ def main():
     torch.backends.cudnn.enabled = cfg.CUDNN.ENABLED
 
     seed = 22
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
+    torch.manual_seed(seed)       # 設置 CPU 隨機種子
+    np.random.seed(seed)          # 設置 NumPy 隨機種子
+    random.seed(seed)             # 設置 Python 內建 random 模塊的隨機種子
+    torch.cuda.manual_seed(seed)  # 設置當前 GPU 的隨機種子
+    torch.cuda.manual_seed_all(seed)  # 設置所有 GPU 的隨機種子
 
     model = eval('models.'+cfg.MODEL.NAME+'.get_pose_net')(
         cfg, is_train=True
