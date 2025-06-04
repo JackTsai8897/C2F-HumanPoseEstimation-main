@@ -23,18 +23,10 @@ DATASET:
   HAND_ORIENTATION: 'right'
   PADDING_IMAGE_TO_BLACK_WITHOUT_BBOX: false
   BBOX_PADDING_FACTOR: 0.0
-
+  
 MODEL:
-  # Transformer Encoder
-  DIM_MODEL: 96
-  DIM_FEEDFORWARD: 192
-  N_HEAD: 1
-  ENCODER_LAYERS: 6
-  ATTENTION_ACTIVATION: relu
-  POS_EMBEDDING: sine
-  # #
   INIT_WEIGHTS: true
-  NAME: transpose_h
+  NAME: pose_hrnet
   NUM_JOINTS: 6
   PRETRAINED: 'models/pytorch/imagenet/hrnet_w48-8ef0771d.pth'
   TARGET_TYPE: gaussian
@@ -44,7 +36,7 @@ MODEL:
   HEATMAP_SIZE:
   - 128
   - 56
-  SIGMA: 2
+  SIGMA: 3
   EXTRA:
     PRETRAINED_LAYERS:
     - 'conv1'
@@ -56,6 +48,8 @@ MODEL:
     - 'stage2'
     - 'transition2'
     - 'stage3'
+    - 'transition3'
+    - 'stage4'
     FINAL_CONV_KERNEL: 1
     STAGE2:
       NUM_MODULES: 1
@@ -81,31 +75,41 @@ MODEL:
       - 96
       - 192
       FUSE_METHOD: SUM
+    STAGE4:
+      NUM_MODULES: 3
+      NUM_BRANCHES: 4
+      BLOCK: BASIC
+      NUM_BLOCKS:
+      - 4
+      - 4
+      - 4
+      - 4
+      NUM_CHANNELS:
+      - 48
+      - 96
+      - 192
+      - 384
+      FUSE_METHOD: SUM
 LOSS:
   USE_TARGET_WEIGHT: true
 TRAIN:
-  BATCH_SIZE_PER_GPU: 14
+  BATCH_SIZE_PER_GPU: 24
   SHUFFLE: true
   BEGIN_EPOCH: 0
-  END_EPOCH: 240
-  LR: 0.0001  # Initial learning rate
-  LR_END: 0.00001  # Final learning rate
-  LR_FACTOR: 0.25  # for MultiStepLR
-  LR_STEP:  # for MultiStepLR
-  - 100
-  - 150
+  END_EPOCH: 34
+  OPTIMIZER: adam
+  LR: 0.001
+  LR_FACTOR: 0.1
+  LR_STEP:
+  - 170
   - 200
-  - 220
-  WD: 0.1
+  WD: 0.0001
   GAMMA1: 0.99
   GAMMA2: 0.0
   MOMENTUM: 0.9
   NESTEROV: false
 TEST:
-  BLUR_KERNEL: 11
-  BATCH_SIZE_PER_GPU: 12
-  # 'data/coco/person_detection_results/COCO_test-dev2017_detections_AP_H_609_person.json'
-  # 'data/coco/person_detection_results/COCO_val2017_detections_AP_H_56_person.json'
+  BATCH_SIZE_PER_GPU: 24
   COCO_BBOX_FILE: 'data/coco/person_detection_results/COCO_val2017_detections_AP_H_56_person.json'
   BBOX_THRE: 1.0
   IMAGE_THRE: 0.0
