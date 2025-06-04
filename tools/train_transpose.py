@@ -119,6 +119,8 @@ def main():
     dump_input = torch.rand(
         (1, 3, cfg.MODEL.IMAGE_SIZE[1], cfg.MODEL.IMAGE_SIZE[0])
     )
+    writer_dict['writer'].add_graph(model, (dump_input, ))
+    logger.info(get_model_summary(model, dump_input))
 
     # model = torch.nn.DataParallel(model, device_ids=cfg.GPUS).cuda()
     model = torch.nn.DataParallel(model, device_ids=[0]).cuda()
