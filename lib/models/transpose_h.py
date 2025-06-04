@@ -673,7 +673,7 @@ class TransPoseH(nn.Module):
             existing_state_dict = {}
             for name, m in pretrained_state_dict.items():
                 if name.split('.')[0] in self.pretrained_layers and name in self.state_dict()\
-                   or self.pretrained_layers[0] is '*':
+                   or self.pretrained_layers[0] == '*':
                     existing_state_dict[name] = m
                     if print_load_info:
                         print(":: {} is loaded from {}".format(name, pretrained))

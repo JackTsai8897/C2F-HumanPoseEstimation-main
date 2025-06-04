@@ -2,6 +2,7 @@
 # Copyright (c) Microsoft
 # Licensed under the MIT License.
 # Written by Bin Xiao (Bin.Xiao@microsoft.com)
+# Modified by Sen Yang (yangsenius@seu.edu.cn)
 # ------------------------------------------------------------------------------
 
 from __future__ import absolute_import
@@ -12,6 +13,9 @@ import argparse
 import os
 import pprint
 import shutil
+
+import numpy as np
+import random
 
 import torch
 import torch.nn.parallel
@@ -26,19 +30,16 @@ from torch.utils.tensorboard import SummaryWriter
 import _init_paths
 from config import cfg
 from config import update_config
-
 from core.loss import JointsMSELoss
-from core.loss import JointsOHKMMSELoss
-from core.function import train
-from core.function import validate
+from core.function import train_transpose
+from core.function import validate_transpose
 from utils.utils import get_optimizer
-from utils.utils import save_checkpoint
+from utils.utils import save_checkpoint_transpose
 from utils.utils import create_logger
 from utils.utils import get_model_summary
 
 import dataset
 import models
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train keypoints network')
@@ -91,14 +92,21 @@ def main():
     torch.backends.cudnn.deterministic = cfg.CUDNN.DETERMINISTIC
     torch.backends.cudnn.enabled = cfg.CUDNN.ENABLED
 
-    model, model_fine = eval('models.'+cfg.MODEL.NAME+'.get_pose_net')(
-        cfg, is_train=True)
+    seed = 22
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
+    model = eval('models.'+cfg.MODEL.NAME+'.get_pose_net')(
+        cfg, is_train=True
+    )
 
     # copy model file
     this_dir = os.path.dirname(__file__)
     shutil.copy2(
         os.path.join(this_dir, '../lib/models', cfg.MODEL.NAME + '.py'),
         final_output_dir)
+    # logger.info(pprint.pformat(model))
 
     writer_dict = {
         'writer': SummaryWriter(log_dir=tb_log_dir),
@@ -109,22 +117,15 @@ def main():
     dump_input = torch.rand(
         (1, 3, cfg.MODEL.IMAGE_SIZE[1], cfg.MODEL.IMAGE_SIZE[0])
     )
-    writer_dict['writer'].add_graph(model, (dump_input, ))
-    logger.info(get_model_summary(model, dump_input))
 
-    dump_input_fine = torch.rand(1, cfg.MODEL.NUM_JOINTS, cfg.MODEL.IMAGE_SIZE[1], cfg.MODEL.IMAGE_SIZE[0])  #gaidong
-    writer_dict['writer'].add_graph(model_fine, (dump_input_fine, ))
-    logger.info(get_model_summary(model_fine, dump_input_fine))
-
+    # model = torch.nn.DataParallel(model, device_ids=cfg.GPUS).cuda()
     model = torch.nn.DataParallel(model, device_ids=[0]).cuda()
-    model_fine = torch.nn.DataParallel(model_fine,device_ids=[0]).cuda()         # gaidong
-    # model = torch.nn.DataParallel(model, device_ids=[0,1,2,3]).cuda()
-    # model_fine = torch.nn.DataParallel(model_fine, device_ids=[0,1,2,3]).cuda()         # gaidong
+
     # define loss function (criterion) and optimizer
     criterion = JointsMSELoss(
         use_target_weight=cfg.LOSS.USE_TARGET_WEIGHT
     ).cuda()
-    criterion_fine = JointsOHKMMSELoss(False).cuda()
+
     # Data loading code
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
@@ -132,7 +133,7 @@ def main():
     train_dataset = eval('dataset.'+cfg.DATASET.DATASET)(
         cfg, cfg.DATASET.ROOT, cfg.DATASET.TRAIN_SET, True,
         transforms.Compose([
-            transforms.ToTensor(),#把[0,255]形状为[H,W,C]的图片转化为[1,1.0]形状为[C,H,W]的torch.FloatTensor
+            transforms.ToTensor(),
             normalize,
         ])
     )
@@ -162,64 +163,62 @@ def main():
     best_perf = 99999 # for distance metric
     best_model = False
     last_epoch = -1
-    optimizer=torch.optim.Adam([{"params":model.parameters()}, {"params":model_fine.parameters()}], lr=cfg.TRAIN.LR) #gaidong
+
+    optimizer = get_optimizer(cfg, model)
+
     begin_epoch = cfg.TRAIN.BEGIN_EPOCH
     checkpoint_file = os.path.join(
         final_output_dir, 'checkpoint.pth'
     )
 
-    #Auto Resume
     if cfg.AUTO_RESUME and os.path.exists(checkpoint_file):
         logger.info("=> loading checkpoint '{}'".format(checkpoint_file))
         checkpoint = torch.load(checkpoint_file)
         begin_epoch = checkpoint['epoch']
         best_perf = checkpoint['perf']
         last_epoch = checkpoint['epoch']
-        
+
         writer_dict['train_global_steps'] = checkpoint['train_global_steps']
         writer_dict['valid_global_steps'] = checkpoint['valid_global_steps']
-        
+
         model.load_state_dict(checkpoint['state_dict'])
-        # 添加这一段
-        if 'state_dict_fine' in checkpoint:
-            model_fine.load_state_dict(checkpoint['state_dict_fine'])
-        else:
-            logger.warning("=> No state_dict_fine found in checkpoint, model_fine will use random initialization")
-    
+
         optimizer.load_state_dict(checkpoint['optimizer'])
         logger.info("=> loaded checkpoint '{}' (epoch {})".format(
             checkpoint_file, checkpoint['epoch']))
 
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, cfg.TRAIN.LR_STEP, cfg.TRAIN.LR_FACTOR,
-        last_epoch=last_epoch
-    )
+    # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+    #     optimizer, cfg.TRAIN.LR_STEP, cfg.TRAIN.LR_FACTOR,
+    #     last_epoch=last_epoch
+    # )
 
-    # 訓練開始前釋放記憶體
-    torch.cuda.empty_cache()
-    torch.cuda.ipc_collect()
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, cfg.TRAIN.END_EPOCH, eta_min=cfg.TRAIN.LR_END, last_epoch=last_epoch)
+
+    model.cuda()
+
 
     for epoch in range(begin_epoch, cfg.TRAIN.END_EPOCH):
+
+        logger.info("=> current learning rate is {:.6f}".format(lr_scheduler.get_last_lr()[0]))
         # train for one epoch
-        train(cfg, train_loader, model, model_fine, criterion, criterion_fine,optimizer, epoch,
+        train_transpose(cfg, train_loader, model, criterion, optimizer, epoch,
               final_output_dir, tb_log_dir, writer_dict)
-        
-        # 更新學習率（應該在 optimizer.step() 之後）
-        lr_scheduler.step()
 
-        print('lr: ', lr_scheduler.get_last_lr())  # 修正 get_lr() 問題
-
-        # evaluate on training set
-        perf_indicator = validate(
-            cfg, train_loader, train_dataset, model, model_fine,criterion, criterion_fine,
+        # evaluate on training set, data_type = 'train'
+        perf_indicator = validate_transpose(
+            cfg, train_loader, train_dataset, model, criterion,
             final_output_dir, tb_log_dir, writer_dict, data_type='train'
         )
-        
         # evaluate on validation set
-        perf_indicator = validate(
-            cfg, valid_loader, valid_dataset, model, model_fine,criterion, criterion_fine,
+        perf_indicator = validate_transpose(
+            cfg, valid_loader, valid_dataset, model, criterion,
             final_output_dir, tb_log_dir, writer_dict
         )
+        
+        lr_scheduler.step()
+
+        # perf_indicator = Mean_distance, so use <= to compare
         if perf_indicator <= best_perf:
             best_perf = perf_indicator
             best_model = True
@@ -227,15 +226,11 @@ def main():
             best_model = False
 
         logger.info('=> saving checkpoint to {}'.format(final_output_dir))
-        
-        # save checkpoint
-        save_checkpoint({
+        save_checkpoint_transpose({
             'epoch': epoch + 1,
             'model': cfg.MODEL.NAME,
             'state_dict': model.state_dict(),
-            'state_dict_fine': model_fine.state_dict(),  # 添加这一行
             'best_state_dict': model.module.state_dict(),
-            'best_state_dict_fine': model_fine.module.state_dict(),  # 添加这一行
             'perf': perf_indicator,
             'optimizer': optimizer.state_dict(),
             'train_global_steps': writer_dict['train_global_steps'],

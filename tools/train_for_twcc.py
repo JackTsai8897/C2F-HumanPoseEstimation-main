@@ -159,7 +159,7 @@ def main():
         pin_memory=cfg.PIN_MEMORY
     )
 
-    best_perf = 0.0
+    best_perf = 99999 # for distance metric
     best_model = False
     last_epoch = -1
     optimizer=torch.optim.Adam([{"params":model.parameters()}, {"params":model_fine.parameters()}], lr=cfg.TRAIN.LR) #gaidong
@@ -205,12 +205,18 @@ def main():
 
         print('lr: ', lr_scheduler.get_last_lr())  # 修正 get_lr() 問題
 
+        # evaluate on training set
+        perf_indicator = validate(
+            cfg, train_loader, train_dataset, model, model_fine,criterion, criterion_fine,
+            final_output_dir, tb_log_dir, writer_dict, data_type='train'
+        )
+        
         # evaluate on validation set
         perf_indicator = validate(
             cfg, valid_loader, valid_dataset, model, model_fine,criterion, criterion_fine,
             final_output_dir, tb_log_dir, writer_dict
         )
-        if perf_indicator >= best_perf:
+        if perf_indicator <= best_perf:
             best_perf = perf_indicator
             best_model = True
         else:
