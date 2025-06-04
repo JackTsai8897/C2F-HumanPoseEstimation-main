@@ -146,6 +146,13 @@ def main():
             normalize,
         ])
     )
+    train_test_dataset = eval('dataset.'+cfg.DATASET.DATASET)(
+        cfg, cfg.DATASET.ROOT, cfg.DATASET.TRAIN_SET, False,
+        transforms.Compose([
+            transforms.ToTensor(),#把[0,255]形状为[H,W,C]的图片转化为[1,1.0]形状为[C,H,W]的torch.FloatTensor
+            normalize,
+        ])
+    )
     valid_dataset = eval('dataset.'+cfg.DATASET.DATASET)(
         cfg, cfg.DATASET.ROOT, cfg.DATASET.TEST_SET, False,
         transforms.Compose([
@@ -158,6 +165,13 @@ def main():
         train_dataset,
         batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU*len(cfg.GPUS),
         shuffle=cfg.TRAIN.SHUFFLE,
+        num_workers=cfg.WORKERS,
+        pin_memory=cfg.PIN_MEMORY
+    )
+    train_test_loader = torch.utils.data.DataLoader(
+        train_test_dataset,
+        batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU*len(cfg.GPUS),
+        shuffle=False,
         num_workers=cfg.WORKERS,
         pin_memory=cfg.PIN_MEMORY
     )
@@ -217,7 +231,7 @@ def main():
 
         # evaluate on training set
         perf_indicator = validate(
-            cfg, train_loader, train_dataset, model, model_fine,criterion, criterion_fine,
+            cfg, train_test_loader, train_test_dataset, model, model_fine,criterion, criterion_fine,
             final_output_dir, tb_log_dir, writer_dict, data_type='train'
         )
         

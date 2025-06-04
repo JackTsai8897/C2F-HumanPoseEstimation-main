@@ -139,6 +139,13 @@ def main():
             normalize,
         ])
     )
+    train_test_dataset = eval('dataset.'+cfg.DATASET.DATASET)(
+        cfg, cfg.DATASET.ROOT, cfg.DATASET.TRAIN_SET, False,
+        transforms.Compose([
+            transforms.ToTensor(),
+            normalize,
+        ])
+    )
     valid_dataset = eval('dataset.'+cfg.DATASET.DATASET)(
         cfg, cfg.DATASET.ROOT, cfg.DATASET.TEST_SET, False,
         transforms.Compose([
@@ -151,6 +158,13 @@ def main():
         train_dataset,
         batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU*len(cfg.GPUS),
         shuffle=cfg.TRAIN.SHUFFLE,
+        num_workers=cfg.WORKERS,
+        pin_memory=cfg.PIN_MEMORY
+    )
+    train_test_loader = torch.utils.data.DataLoader(
+        train_test_dataset,
+        batch_size=cfg.TRAIN.BATCH_SIZE_PER_GPU*len(cfg.GPUS),
+        shuffle=False,
         num_workers=cfg.WORKERS,
         pin_memory=cfg.PIN_MEMORY
     )
@@ -209,7 +223,7 @@ def main():
 
         # evaluate on training set, data_type = 'train'
         perf_indicator = validate_transpose(
-            cfg, train_loader, train_dataset, model, criterion,
+            cfg, train_test_loader, train_test_dataset, model, criterion,
             final_output_dir, tb_log_dir, writer_dict, data_type='train'
         )
         # evaluate on validation set

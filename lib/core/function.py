@@ -255,6 +255,7 @@ def validate(config, val_loader, val_dataset, model, model_fine, criterion, crit
                         dict(name_values),
                         global_steps
                     )
+                writer_dict['valid_global_steps'] = global_steps + 1
             else:
                 if isinstance(name_values, list):
                     for name_value in name_values:
@@ -269,7 +270,6 @@ def validate(config, val_loader, val_dataset, model, model_fine, criterion, crit
                         dict(name_values),
                         global_steps
                     )
-            writer_dict['valid_global_steps'] = global_steps + 1
 
     return perf_indicator
 
@@ -525,6 +525,7 @@ def validate_transpose(config, val_loader, val_dataset, model, criterion, output
                         dict(name_values),
                         global_steps
                     )
+                writer_dict['valid_global_steps'] = global_steps + 1
             else:
                 if isinstance(name_values, list):
                     for name_value in name_values:
@@ -539,6 +540,5 @@ def validate_transpose(config, val_loader, val_dataset, model, criterion, output
                         dict(name_values),
                         global_steps
                     )
-            writer_dict['valid_global_steps'] = global_steps + 1
 
     return perf_indicator
