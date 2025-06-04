@@ -67,10 +67,13 @@ for 4 GPU, Run:
     python ./tools/train_for_twcc.py --cfg experiments/mydataset/hrnet/w48_512x224_adam_lr1e-3.yaml
 
 for 1 GPU, Run:
-    python .\tools\train_transpose.py --cfg .\experiments\mydataset\transpose_h\test_aug_right_TP_H_w48_256x192_stage3_1_4_d96_h192_relu_enc6_mh1.yaml
+    python ./tools/train_transpose.py --cfg ./experiments/mydataset/transpose_h/test_aug_right_TP_H_w48_256x192_stage3_1_4_d96_h192_relu_enc6_mh1.yaml
 for 4 GPU, Run:
-    python .\tools\train_transpose_for_twcc.py --cfg .\experiments\mydataset\transpose_h\test_aug_right_TP_H_w48_256x192_stage3_1_4_d96_h192_relu_enc6_mh1.yaml
+    python ./tools/train_transpose_for_twcc.py --cfg ./experiments/mydataset/transpose_h/100aug_right_TP_H_w48_256x192_stage3_1_4_d96_h192_relu_enc6_mh1.yaml
 
 sudo apt update && sudo apt upgrade -y
 sudo apt install libglx-mesa0
 sudo apt install libgl1-mesa-dev
+
+sudo apt update && sudo apt upgrade -y && sudo apt install -y libglx-mesa0 libgl1-mesa-dev
+sudo apt update && sudo apt upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" && sudo apt install -y libglx-mesa0 libgl1-mesa-dev
