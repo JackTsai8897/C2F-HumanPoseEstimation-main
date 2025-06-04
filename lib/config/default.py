@@ -44,6 +44,17 @@ _C.MODEL.IMAGE_SIZE = [384, 288]  # width * height, ex: 192 * 256
 _C.MODEL.HEATMAP_SIZE = [96, 72]  # width * height, ex: 24 * 32
 _C.MODEL.SIGMA = 3
 _C.MODEL.EXTRA = CN(new_allowed=True)
+# Transformer
+_C.MODEL.BOTTLENECK_NUM = 0
+_C.MODEL.DIM_MODEL = 256
+_C.MODEL.DIM_FEEDFORWARD = 512
+_C.MODEL.ENCODER_LAYERS = 6
+_C.MODEL.N_HEAD = 8
+_C.MODEL.ATTENTION_ACTIVATION = 'relu'
+_C.MODEL.POS_EMBEDDING = 'learnable'
+_C.MODEL.INTERMEDIATE_SUP = False
+_C.MODEL.PE_ONLY_AT_BEGIN = False
+#### 
 
 _C.LOSS = CN()
 _C.LOSS.USE_OHKM = False
@@ -79,6 +90,7 @@ _C.TRAIN = CN()
 _C.TRAIN.LR_FACTOR = 0.1
 _C.TRAIN.LR_STEP = [90, 110]
 _C.TRAIN.LR = 0.001
+_C.TRAIN.LR_END = 0.00001
 
 _C.TRAIN.OPTIMIZER = 'adam'
 _C.TRAIN.MOMENTUM = 0.9
@@ -98,6 +110,9 @@ _C.TRAIN.SHUFFLE = True
 
 # testing
 _C.TEST = CN()
+
+# darkpose
+_C.TEST.BLUR_KERNEL = 3 
 
 # size of images for each device
 _C.TEST.BATCH_SIZE_PER_GPU = 32
