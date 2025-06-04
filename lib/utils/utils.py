@@ -83,8 +83,10 @@ def save_checkpoint(states, is_best, output_dir,
     
     # 如果是最佳模型，保存 model_best.pth
     if is_best and 'state_dict' in states:
-        torch.save({states['best_state_dict'], states['best_state_dict_fine']},
-                   os.path.join(output_dir, 'model_best.pth'))
+        torch.save({
+            'state_dict': states['best_state_dict'],
+            'state_dict_fine': states['best_state_dict_fine']
+            }, os.path.join(output_dir, 'model_best.pth'))
     
     # 每當 epoch 是 5 的倍數時，保存一個特定的 checkpoint
     if 'epoch' in states and states['epoch'] % 5 == 0:
