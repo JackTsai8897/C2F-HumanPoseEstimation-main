@@ -18,13 +18,13 @@ from pycocotools.cocoeval import COCOeval
 import json_tricks as json
 import numpy as np
 
-# from dataset.HandKeypointsDataset import HandKeypointsDataset
-from dataset.JointsDataset import JointsDataset
+from dataset.HandKeypointsDataset import HandKeypointsDataset
+# from dataset.JointsDataset import JointsDataset
 
 logger = logging.getLogger(__name__)
 
 
-class MyDataset(JointsDataset):
+class MyDataset(HandKeypointsDataset):
     '''
     "keypoints": {
         0: "nose",
@@ -367,15 +367,9 @@ class MyDataset(JointsDataset):
         
         # Calculate pixel distance for each keypoint
         distances = []
+        keypoint_distances = [[] for _ in range(self.num_joints)]  # 為每個關鍵點創建一個距離列表
         valid_keypoints = 0
         total_keypoints = 0
-        
-        # Thresholds for evaluation (in pixels)
-        thresholds = [7, 14, 21]
-        threshold_count = [0] * len(thresholds)
-        
-        # Calculate PCK for each keypoint at each threshold
-        keypoint_pck = np.zeros((self.num_joints, len(thresholds)), dtype=np.float32)
         keypoint_valid_counts = np.zeros(self.num_joints, dtype=np.int32)
         
         # Store per-image results
@@ -395,6 +389,7 @@ class MyDataset(JointsDataset):
             image_valid_keypoints = 0
             image_total_keypoints = 0
             image_distances = []
+            image_keypoint_distances = [[] for _ in range(self.num_joints)]
             
             for j in range(self.num_joints):
                 # Check if both prediction and ground truth are valid
@@ -427,23 +422,14 @@ class MyDataset(JointsDataset):
                     
                     dist = np.sqrt((pred_x - gt_x)**2 + (pred_y - gt_y)**2)
                     distances.append(dist)
+                    keypoint_distances[j].append(dist)  # 將距離添加到對應關鍵點的列表中
                     image_distances.append(dist)
+                    image_keypoint_distances[j].append(dist)
                     
                     # Add distance to keypoint result
                     keypoint_result['distance'] = float(dist)
-                    
-                    # Count predictions within thresholds
-                    for k, threshold in enumerate(thresholds):
-                        if dist <= threshold:
-                            threshold_count[k] += 1
-                            keypoint_pck[j, k] += 1
-                            keypoint_result[f'within_{threshold}px'] = True
-                        else:
-                            keypoint_result[f'within_{threshold}px'] = False
                 else:
                     keypoint_result['distance'] = None
-                    for threshold in thresholds:
-                        keypoint_result[f'within_{threshold}px'] = None
                 
                 image_result['keypoints'].append(keypoint_result)
             
@@ -458,6 +444,18 @@ class MyDataset(JointsDataset):
                     'total_keypoints': int(image_total_keypoints),
                     'valid_percentage': float(image_valid_keypoints / image_total_keypoints * 100)
                 }
+                
+                # 添加每個關鍵點的距離統計
+                image_result['keypoint_statistics'] = {}
+                for j in range(self.num_joints):
+                    if image_keypoint_distances[j]:
+                        image_result['keypoint_statistics'][self._get_keypoint_name(j)] = {
+                            'mean_distance': float(np.mean(image_keypoint_distances[j])),
+                            'median_distance': float(np.median(image_keypoint_distances[j])),
+                            'max_distance': float(np.max(image_keypoint_distances[j])),
+                            'min_distance': float(np.min(image_keypoint_distances[j])),
+                            'count': len(image_keypoint_distances[j])
+                        }
             else:
                 image_result['statistics'] = {
                     'mean_distance': None,
@@ -468,6 +466,7 @@ class MyDataset(JointsDataset):
                     'total_keypoints': int(image_total_keypoints),
                     'valid_percentage': 0.0
                 }
+                image_result['keypoint_statistics'] = {}
             
             per_image_results.append(image_result)
         
@@ -478,14 +477,29 @@ class MyDataset(JointsDataset):
         min_dist = np.min(distances) if distances else float('inf')
         std_dist = np.std(distances) if distances else float('inf')
         
-        # Calculate PCK (Percentage of Correct Keypoints) for each threshold
-        pck_values = [count / valid_keypoints * 100 if valid_keypoints > 0 else 0 
-                    for count in threshold_count]
-        
-        # Calculate PCK percentage for each keypoint
+        # 計算每個關鍵點的距離統計
+        keypoint_stats = {}
         for j in range(self.num_joints):
-            if keypoint_valid_counts[j] > 0:
-                keypoint_pck[j] = keypoint_pck[j] / keypoint_valid_counts[j] * 100
+            if keypoint_distances[j]:
+                keypoint_stats[self._get_keypoint_name(j)] = {
+                    'mean_distance': float(np.mean(keypoint_distances[j])),
+                    'median_distance': float(np.median(keypoint_distances[j])),
+                    'max_distance': float(np.max(keypoint_distances[j])),
+                    'min_distance': float(np.min(keypoint_distances[j])),
+                    'std_distance': float(np.std(keypoint_distances[j])),
+                    'count': int(keypoint_valid_counts[j]),
+                    'valid_percentage': float(keypoint_valid_counts[j] / num_samples * 100)
+                }
+            else:
+                keypoint_stats[self._get_keypoint_name(j)] = {
+                    'mean_distance': float('inf'),
+                    'median_distance': float('inf'),
+                    'max_distance': float('inf'),
+                    'min_distance': float('inf'),
+                    'std_distance': float('inf'),
+                    'count': 0,
+                    'valid_percentage': 0.0
+                }
         
         # Print results
         logger.info('=> Mean pixel distance: {:.2f}'.format(mean_dist))
@@ -498,14 +512,14 @@ class MyDataset(JointsDataset):
             valid_keypoints / total_keypoints * 100 if total_keypoints > 0 else 0
         ))
         
-        # Print PCK values
-        for i, threshold in enumerate(thresholds):
-            logger.info('=> PCK@{} pixels: {:.2f}%'.format(threshold, pck_values[i]))
-        
-        # Print PCK values for each keypoint
+        # Print distance statistics for each keypoint
         for j in range(self.num_joints):
-            logger.info('=> {} PCK@7 pixels: {:.2f}%'.format(
-                self._get_keypoint_name(j), keypoint_pck[j, 0]))
+            kpt_name = self._get_keypoint_name(j)
+            if keypoint_distances[j]:
+                logger.info('=> {} mean distance: {:.2f}'.format(
+                    kpt_name, keypoint_stats[kpt_name]['mean_distance']))
+                logger.info('=> {} median distance: {:.2f}'.format(
+                    kpt_name, keypoint_stats[kpt_name]['median_distance']))
         
         # Save overall results to file
         result_file = os.path.join(output_dir, 'pixel_distance_results.json')
@@ -519,15 +533,7 @@ class MyDataset(JointsDataset):
                 'valid_keypoints': int(valid_keypoints),
                 'total_keypoints': int(total_keypoints),
                 'valid_percentage': float(valid_keypoints / total_keypoints * 100 if total_keypoints > 0 else 0),
-                'thresholds': thresholds,
-                'pck_values': [float(v) for v in pck_values],
-                'keypoint_pck': {
-                    self._get_keypoint_name(j): {
-                        f'PCK@{threshold}px': float(keypoint_pck[j, i])
-                        for i, threshold in enumerate(thresholds)
-                    }
-                    for j in range(self.num_joints)
-                }
+                'keypoint_statistics': keypoint_stats
             }, f, indent=4)
         
         # Save per-image results to file
@@ -540,22 +546,18 @@ class MyDataset(JointsDataset):
         
         # Return metrics in the specified format
         name_value = [
-            ('E0', float(keypoint_pck[0, 0])),  # PCK for keypoint 0 at 7px threshold
-            ('E1', float(keypoint_pck[1, 0])),  # PCK for keypoint 1 at 7px threshold
-            ('E2', float(keypoint_pck[2, 0])),  # PCK for keypoint 2 at 7px threshold
-            ('W0', float(keypoint_pck[3, 0])),  # PCK for keypoint 3 at 7px threshold
-            ('W1', float(keypoint_pck[4, 0])),  # PCK for keypoint 4 at 7px threshold
-            ('W2', float(keypoint_pck[5, 0])),  # PCK for keypoint 5 at 7px threshold
-            ('Mean', float(np.mean(keypoint_pck[:, 0]))),  # Mean PCK across all keypoints at 7px
-            ('PCK@7px', float(pck_values[0])),
-            ('PCK@14px', float(pck_values[1])),
-            ('PCK@21px', float(pck_values[2])),
+            ('E0_mean_dist', float(keypoint_stats['E0']['mean_distance'])),
+            ('E1_mean_dist', float(keypoint_stats['E1']['mean_distance'])),
+            ('E2_mean_dist', float(keypoint_stats['E2']['mean_distance'])),
+            ('W0_mean_dist', float(keypoint_stats['W0']['mean_distance'])),
+            ('W1_mean_dist', float(keypoint_stats['W1']['mean_distance'])),
+            ('W2_mean_dist', float(keypoint_stats['W2']['mean_distance'])),
             ('Mean_distance', float(mean_dist)),
             ('Median_distance', float(median_dist))
         ]
         name_value = OrderedDict(name_value)
         
-        return name_value, name_value["Mean"]
+        return name_value, name_value["Mean_distance"]
 
     def _get_keypoint_name(self, keypoint_id):
         """
